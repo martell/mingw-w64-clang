@@ -1,0 +1,8 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+
+mkdir -p $PREFIX/usr/include/c++/v1
+cd ..
+cp -r libcxx/include/* $PREFIX/usr/include/c++/v1

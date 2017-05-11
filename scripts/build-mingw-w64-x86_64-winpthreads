@@ -1,0 +1,22 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+
+TARGET=x86_64-w64-mingw32
+
+export PATH=$PREFIX/usr/bin:$PATH
+export MAKE=/usr/bin/make CC=$PREFIX/usr/bin/$TARGET-clang CXX=$PREFIX/usr/bin/$TARGET-clang++ AR=$PREFIX/usr/bin/llvm-ar-gnu RANLIB=$PREFIX/usr/bin/llvm-ranlib-gnu
+
+cd ..
+mkdir build-$TARGET-winpthreads
+cd build-$TARGET-winpthreads
+
+AR="llvm-ar -format gnu" \
+../mingw-w64/mingw-w64-libraries/winpthreads/configure \
+    --host=$TARGET \
+    --prefix=$PREFIX/usr/$TARGET \
+    --disable-shared
+
+make -j1
+make -j1 install

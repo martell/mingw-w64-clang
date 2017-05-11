@@ -1,0 +1,31 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+export USRPREFIX=$PREFIX/usr
+
+TARGET=armv7-w64-mingw32
+
+export PATH=$PREFIX/usr/bin:$PATH
+export CC=$TARGET-clang CXX=$TARGET-clang++ AR=$PREFIX/usr/bin/llvm-ar RANLIB=$PREFIX/usr/bin/llvm-ranlib
+
+cd ..
+mkdir build-compiler-rt-armv7-git
+cd build-compiler-rt-armv7-git
+
+cmake -G"Ninja" \
+    -DCMAKE_C_COMPILER=$CC \
+    -DCMAKE_CXX_COMPILER=$CXX \
+    -DCMAKE_SYSTEM_NAME=Windows \
+    -DCMAKE_AR=$AR \
+    -DCMAKE_RANLIB=$RANLIB \
+    -DCMAKE_C_COMPILER_WORKS=1 \
+    -DLLVM_CONFIG_PATH=$PREFIX/usr/bin/llvm-config \
+    -DCOMPILER_RT_DEFAULT_TARGET_TRIPLE="armv7--windows-gnu" \
+    -DCMAKE_SIZEOF_VOID_P=4 \
+    ../compiler-rt/lib/builtins
+
+ninja
+
+mkdir -p $USRPREFIX/lib/clang/4.0.0/lib/windows
+cp lib/windows/libclang_rt.builtins-arm.a $USRPREFIX/lib/clang/4.0.0/lib/windows/libclang_rt.builtins-arm.a

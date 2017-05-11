@@ -1,0 +1,47 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+
+TARGET=armv7-w64-mingw32
+
+#export PATH=$PREFIX/usr/bin:$PATH
+export CC=$PREFIX/usr/bin/$TARGET-clang CXX=$PREFIX/usr/bin/$TARGET-clang++ AR=$PREFIX/usr/bin/llvm-ar-gnu RANLIB=$PREFIX/usr/bin/llvm-ranlib-gnu
+
+cd ..
+mkdir build-mingw-armv7-llvm-git
+cd build-mingw-armv7-llvm-git
+
+cmake -G"Ninja" \
+    -DCMAKE_C_COMPILER=$CC \
+    -DCMAKE_CXX_COMPILER=$CXX \
+    -DCMAKE_C_FLAGS="-D__CRT__NO_INLINE" \
+    -DCMAKE_CXX_FLAGS="-D_GNU_SOURCE -D_LIBCPP_HAS_NO_CONSTEXPR -D__CRT__NO_INLINE" \
+    -DCMAKE_CROSSCOMPILING=TRUE \
+    -DCMAKE_SYSTEM_NAME=Windows \
+    -DMINGW=TRUE \
+    -DCMAKE_AR=$PREFIX/usr/bin/llvm-ar-gnu \
+    -DCMAKE_RANLIB=$PREFIX/usr/bin/llvm-ranlib-gnu \
+    -DCMAKE_INSTALL_PREFIX="/usr" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_TABLEGEN=$PREFIX/usr/bin/llvm-tblgen \
+    -DLLVM_CONFIG_PATH=$PREFIX/usr/bin/llvm-config \
+    -DLLVM_DEFAULT_TARGET_TRIPLE="armv7--windows-gnu" \
+    -DLLVM_TARGET_ARCH=X86 \
+    -DLLVM_TARGETS_TO_BUILD=X86 \
+    -DLLVM_ENABLE_ASSERTIONS=OFF \
+    -DLLVM_ENABLE_THREADS=0 \
+    -DPYTHON_EXECUTABLE=/usr/bin/python \
+    -DLLVM_ENABLE_FFI=OFF \
+    -DLLVM_ENABLE_SPHINX=OFF \
+    -DCMAKE_VERBOSE_MAKEFILE=ON \
+    -DLLVM_BUILD_TESTS=OFF \
+    -DLLVM_BUILD_STATIC=TRUE \
+    ../llvm
+
+
+# -DCLANG_TABLEGEN=$PREFIX/usr/bin/clang-tblgen \  
+ # -DLLVM_ON_WIN32=TRUE \
+
+ninja
+#DESTDIR=/Users/martell/llvm ninja install

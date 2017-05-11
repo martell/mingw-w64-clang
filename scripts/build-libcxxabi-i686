@@ -1,0 +1,34 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+
+TARGET=i686-w64-mingw32
+
+export PATH=$PREFIX/usr/bin:$PATH
+export CC=$TARGET-clang CXX=$TARGET-clang++ AR=$PREFIX/usr/bin/llvm-ar-gnu RANLIB=$PREFIX/usr/bin/llvm-ranlib-gnu
+
+cd ..
+mkdir build-libcxxabi-i686-git
+cd build-libcxxabi-i686-git
+
+cmake -G"Ninja" \
+    -DCMAKE_C_COMPILER=$CC \
+    -DCMAKE_CXX_COMPILER=$CXX \
+    -DCMAKE_CXX_COMPILER_WORKS=1 \
+    -DCMAKE_AR=$PREFIX/usr/bin/llvm-ar-gnu \
+    -DCMAKE_RANLIB=$PREFIX/usr/bin/llvm-ranlib-gnu \
+    -DCMAKE_INSTALL_PREFIX=/usr/$TARGET \
+    -DLIBCXXABI_USE_COMPILER_RT=ON \
+    -DLIBCXXABI_ENABLE_EXCEPTIONS=OFF \
+    -DLIBCXXABI_ENABLE_THREADS=OFF \
+    -DLIBCXXABI_TARGET_TRIPLE=$TARGET \
+    -DLIBCXXABI_SYSROOT=$PREFIX/usr \
+    -DLIBCXXABI_ENABLE_SHARED=OFF \
+    -DLIBCXXABI_LIBCXX_INCLUDES="../libcxx/include" \
+    -DLLVM_NO_OLD_LIBSTDCXX=TRUE \
+    -DCXX_SUPPORTS_CXX11=TRUE \
+    ../libcxxabi
+
+ninja
+DESTDIR=$PREFIX ninja install

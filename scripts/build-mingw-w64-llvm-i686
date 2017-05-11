@@ -1,0 +1,41 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+
+TARGET=i686-w64-mingw32
+
+#export PATH=$PREFIX/usr/bin:$PATH
+export CC=$PREFIX/usr/bin/$TARGET-clang CXX=$PREFIX/usr/bin/$TARGET-clang++ AR=$PREFIX/usr/bin/llvm-ar-gnu RANLIB=$PREFIX/usr/bin/llvm-ranlib-gnu
+
+cd ..
+mkdir build-mingw-i686-llvm-git
+cd build-mingw-i686-llvm-git
+
+cmake -G"Ninja" \
+    -DCMAKE_C_COMPILER=$CC \
+    -DCMAKE_CXX_COMPILER=$CXX \
+    -DCMAKE_CROSSCOMPILING=TRUE \
+    -DCMAKE_SYSTEM_NAME=Windows \
+    -DCMAKE_AR=$PREFIX/usr/bin/llvm-ar-gnu \
+    -DCMAKE_RANLIB=$PREFIX/usr/bin/llvm-ranlib-gnu \
+    -DCMAKE_INSTALL_PREFIX="/usr" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DLLVM_TABLEGEN=$PREFIX/usr/bin/llvm-tblgen \
+    -DLLVM_DEFAULT_TARGET_TRIPLE="i686--windows-gnu" \
+    -DLLVM_TARGET_ARCH=X86 \
+    -DLLVM_TARGETS_TO_BUILD=X86 \
+    -DLLVM_ENABLE_ASSERTIONS=OFF \
+    -DLLVM_ENABLE_THREADS=0 \
+    -DPYTHON_EXECUTABLE=/usr/bin/python \
+    -DLLVM_ENABLE_FFI=OFF \
+    -DLLVM_ENABLE_SPHINX=OFF \
+    -DCMAKE_VERBOSE_MAKEFILE=ON \
+    ../llvm
+
+
+# -DCLANG_TABLEGEN=$PREFIX/usr/bin/clang-tblgen \  
+ # -DLLVM_ON_WIN32=TRUE \
+
+ninja
+#DESTDIR=/Users/martell/llvm ninja install

@@ -1,0 +1,28 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+
+#TARGET=i686-w64-mingw32
+#export CC=clang CXX=clang++
+tools="gendef genlib"
+
+cd ..
+mkdir build-mingw-w64-tools
+
+local cur=
+for cur in ${tools}; do
+  mkdir -p build-mingw-w64-tools/${cur}
+  cd build-mingw-w64-tools/${cur}
+  ../../mingw-w64/mingw-w64-tools/${cur}/configure \
+    --prefix=/usr
+  make
+  cd ../..
+done
+
+local cur=
+for cur in ${tools}; do
+  cd build-mingw-w64-tools/${cur}
+  make DESTDIR=$PREFIX install
+  cd ../..
+done

@@ -1,0 +1,30 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+export USRPREFIX=$PREFIX/usr
+
+export PATH=$PREFIX/usr/bin:$PATH
+
+cd ..
+mkdir build-compiler-rt-git
+cd build-compiler-rt-git
+
+cmake -G"Ninja" \
+    -DCMAKE_TOOLCHAIN_FILE=../scripts/mingw.toolchain \
+    -DCMAKE_C_COMPILER=$PREFIX/usr/bin/clang \
+    -DCMAKE_CXX_COMPILER=$PREFIX/usr/bin/clang++ \
+    -DCMAKE_AR=$PREFIX/usr/bin/llvm-ar \
+    -DCMAKE_RANLIB=$PREFIX/usr/bin/llvm-ranlib \
+    -DCMAKE_INSTALL_PREFIX="/usr" \
+    -DCMAKE_BUILD_TYPE=Release \
+    -DCMAKE_C_COMPILER_WORKS=ON \
+    ../compiler-rt/lib/builtins
+
+ninja
+DESTDIR=/Users/martell/llvm ninja install
+
+mkdir -p $USRPREFIX/lib/clang/3.9.0/lib/windows
+cp $USRPREFIX/lib/windows/libclang_rt.builtins-x86_64.a $USRPREFIX/lib/clang/3.9.0/lib/windows/libclang_rt.builtins-x86_64.a
+cp $USRPREFIX/lib/windows/libclang_rt.builtins-i386.a $USRPREFIX/lib/clang/3.9.0/lib/windows/libclang_rt.builtins-i386.a
+cp $USRPREFIX/lib/windows/libclang_rt.builtins-arm.a $USRPREFIX/lib/clang/3.9.0/lib/windows/libclang_rt.builtins-arm.a

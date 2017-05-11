@@ -1,0 +1,36 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+
+TARGET=x86_64-w64-mingw32
+
+export PATH=$PREFIX/usr/bin:$PATH
+export CC=$TARGET-clang CXX=$TARGET-clang++ AR=$PREFIX/usr/bin/llvm-ar RANLIB=$PREFIX/usr/bin/llvm-ranlib
+
+cd ..
+mkdir build-libcxx-x86_64-threads-git
+cd build-libcxx-x86_64-threads-git
+
+cmake -G"Ninja" \
+    -DCMAKE_C_COMPILER=$CC \
+    -DCMAKE_CXX_COMPILER=$CXX \
+    -DCMAKE_CROSSCOMPILING=TRUE \
+    -DCMAKE_SYSTEM_NAME=Windows \
+    -DCMAKE_CXX_COMPILER_WORKS=TRUE \
+    -DCMAKE_AR=$PREFIX/usr/bin/llvm-ar-gnu \
+    -DCMAKE_RANLIB=$PREFIX/usr/bin/llvm-ranlib-gnu \
+    -DCMAKE_INSTALL_PREFIX=/usr/$TARGET \
+    -DLIBCXX_INSTALL_HEADERS=OFF \
+    -DLIBCXX_ENABLE_EXCEPTIONS=OFF \
+    -DLIBCXX_ENABLE_THREADS=ON \
+    -DLIBCXX_ENABLE_MONOTONIC_CLOCK=ON \
+    -DLIBCXX_ENABLE_SHARED=OFF \
+    -DLIBCXX_SUPPORTS_STD_EQ_CXX11_FLAG=TRUE \
+    -DLIBCXX_HAVE_CXX_ATOMICS_WITHOUT_LIB=TRUE \
+    -DLIBCXX_ENABLE_EXPERIMENTAL_LIBRARY=OFF \
+    -DLIBCXX_ENABLE_STATIC_ABI_LIBRARY=TRUE \
+    ../libcxx
+
+ninja -j1
+DESTDIR=$PREFIX ninja install

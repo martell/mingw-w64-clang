@@ -1,0 +1,22 @@
+From 65202a18317211828331f8ad9933ad91e0002c1e Mon Sep 17 00:00:00 2001
+From: Martell Malone <martellmalone@gmail.com>
+Date: Tue, 16 Aug 2016 05:18:58 -0700
+Subject: [PATCH 2/2] winpthreads: disable seh handler for clang
+
+
+diff --git a/mingw-w64-libraries/winpthreads/src/thread.c b/mingw-w64-libraries/winpthreads/src/thread.c
+index 565ea48..c7d3475 100644
+--- a/mingw-w64-libraries/winpthreads/src/thread.c
++++ b/mingw-w64-libraries/winpthreads/src/thread.c
+@@ -1472,7 +1472,7 @@ pthread_create_wrapper (void *args)
+     {
+       intptr_t trslt = (intptr_t) 128;
+       /* Provide to this thread a default exception handler.  */
+-      #ifdef __SEH__
++      #if defined(__SEH__) && !defined(__clang__)
+ 	asm ("\t.tl_start:\n"
+ 	  "\t.seh_handler __C_specific_handler, @except\n"
+ 	  "\t.seh_handlerdata\n"
+-- 
+2.8.3
+

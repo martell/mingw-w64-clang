@@ -1,0 +1,36 @@
+#!/bin/bash
+
+PREFIX=~/llvm
+eval PREFIX=$PREFIX
+
+targets="x86_64 i686 armv7"
+
+cd ..
+mkdir build-mingw-w64-headers
+
+local cur=
+for cur in ${targets}; do
+
+  TARGET=${cur}-w64-mingw32
+  CC=$TARGET-clang
+  CXX=$TARGET-clang++
+
+  echo "#!/usr/bin/env bash" > $PREFIX/usr/bin/$CC
+  echo $PREFIX'/usr/bin/clang -target '$cur'-windows-gnu "$@"' >> $PREFIX/usr/bin/$CC
+  chmod +x $PREFIX/usr/bin/$CC
+  echo "#!/usr/bin/env bash" > $PREFIX/usr/bin/$CXX
+  echo $PREFIX'/usr/bin/clang++ -target '$cur'-windows-gnu "$@"' >> $PREFIX/usr/bin/$CXX
+  chmod +x $PREFIX/usr/bin/$CXX
+
+  mkdir build-mingw-w64-headers/${cur}
+  cd build-mingw-w64-headers/${cur}
+
+  ../../mingw-w64/mingw-w64-headers/configure \
+    --host=$TARGET \
+    --prefix=/usr/$TARGET \
+    --enable-sdk=all \
+    --enable-secure-api
+  make
+  make DESTDIR=$PREFIX install
+  cd ../..
+done
