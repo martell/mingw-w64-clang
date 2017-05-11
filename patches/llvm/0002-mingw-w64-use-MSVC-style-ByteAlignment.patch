@@ -1,0 +1,97 @@
+From a2905205983190be8ff814e36a77624484105322 Mon Sep 17 00:00:00 2001
+From: Martell Malone <martellmalone@gmail.com>
+Date: Thu, 11 May 2017 15:25:57 +0100
+Subject: [PATCH] mingw-w64: use MSVC style ByteAlignment
+
+We can do alignment without -aligncomm derectives in PE COFF
+Until we support GNU style in lld we should use this
+
+diff --git a/lib/MC/WinCOFFStreamer.cpp b/lib/MC/WinCOFFStreamer.cpp
+index c26d87f36f8..6cc86112b1b 100644
+--- a/lib/MC/WinCOFFStreamer.cpp
++++ b/lib/MC/WinCOFFStreamer.cpp
+@@ -220,7 +220,7 @@ void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
+   auto *Symbol = cast<MCSymbolCOFF>(S);
+ 
+   const Triple &T = getContext().getObjectFileInfo()->getTargetTriple();
+-  if (T.isKnownWindowsMSVCEnvironment()) {
++  if (T.isKnownWindowsMSVCEnvironment() || T.isWindowsGNUEnvironment()) {
+     if (ByteAlignment > 32)
+       report_fatal_error("alignment is limited to 32-bytes");
+ 
+@@ -232,7 +232,8 @@ void MCWinCOFFStreamer::EmitCommonSymbol(MCSymbol *S, uint64_t Size,
+   Symbol->setExternal(true);
+   Symbol->setCommon(Size, ByteAlignment);
+ 
+-  if (!T.isKnownWindowsMSVCEnvironment() && ByteAlignment > 1) {
++  if (!T.isKnownWindowsMSVCEnvironment() &&
++      !T.isWindowsGNUEnvironment() && ByteAlignment > 1) {
+     SmallString<128> Directive;
+     raw_svector_ostream OS(Directive);
+     const MCObjectFileInfo *MFI = getContext().getObjectFileInfo();
+diff --git a/test/MC/COFF/comm-align.s b/test/MC/COFF/comm-align.s
+deleted file mode 100644
+index ca6bfbea247..00000000000
+--- a/test/MC/COFF/comm-align.s
++++ /dev/null
+@@ -1,57 +0,0 @@
+-# RUN: llvm-mc -triple i686-windows-gnu -filetype obj -o - %s \
+-# RUN:    | llvm-readobj -coff-directives -symbols | FileCheck %s
+-
+-# NOTE: this test checks multiple things:
+-# - that -aligncomm is not emitted for 1-byte alignment
+-# - that -aligncomm is emitted for the various alignments (greater than 1)
+-# - that the alignment is represented as a log_2 of the alignment
+-# - that the section switching occurs correctly
+-# - that functions after the switch also are emitted into the correct section
+-
+-	.text
+-
+-	.def _a
+-		.scl 3
+-		.type 32
+-	.endef
+-_a:
+-	ret
+-
+-	.data
+-
+-	.comm _s_1,4,0                  # @s_1
+-	.comm _s_2,4,1                  # @s_2
+-	.comm _s_4,4,2                  # @s_3
+-	.comm _s_8,4,3                  # @s_4
+-
+-	.comm _small_but_overaligned,1,3                  # @s_4
+-
+-	.text
+-
+-	.def _b
+-		.scl 3
+-		.type 32
+-	.endef
+-_b:
+-	ret
+-
+-# CHECK-NOT: -aligncomm:"_s_1",0
+-
+-# CHECK: Symbols [
+-# CHECK:   Symbol {
+-# CHECK:     Name: _a
+-# CHECK:     Section: .text (1)
+-# CHECK:   }
+-# CHECK:   Symbol {
+-# CHECK:     Name: _small_but_overaligned
+-# CHECK-NEXT:Value: 1
+-# CHECK-NEXT:Section: IMAGE_SYM_UNDEFINED (0)
+-# CHECK:   }
+-# CHECK:   Symbol {
+-# CHECK:     Name: _b
+-# CHECK:     Section: .text (1)
+-# CHECK:   }
+-# CHECK: ]
+-
+-# CHECK: Directive(s): -aligncomm:"_s_2",1 -aligncomm:"_s_4",2 -aligncomm:"_s_8",3 -aligncomm:"_small_but_overaligned",3
+-
+-- 
+2.12.2
+
