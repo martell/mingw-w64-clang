@@ -1,0 +1,154 @@
+From 4e121e1ab286c0a3381a3fe929374c92565b48f3 Mon Sep 17 00:00:00 2001
+From: Martell Malone <martellmalone@gmail.com>
+Date: Sun, 24 Dec 2017 09:00:51 -0800
+Subject: [PATCH] LLD: Protect COFF.h from winnt defines
+
+
+diff --git a/COFF/Driver.cpp b/COFF/Driver.cpp
+index 0e7db7b6a..1bdff7f10 100644
+--- a/COFF/Driver.cpp
++++ b/COFF/Driver.cpp
+@@ -44,6 +44,11 @@ using namespace llvm::object;
+ using namespace llvm::COFF;
+ using llvm::sys::Process;
+ 
++// Protection from winnt defines
++#undef IMAGE_SUBSYSTEM_WINDOWS_GUI
++#undef IMAGE_SUBSYSTEM_WINDOWS_CUI
++#undef IMAGE_SUBSYSTEM_UNKNOWN
++
+ namespace lld {
+ namespace coff {
+ 
+diff --git a/COFF/DriverUtils.cpp b/COFF/DriverUtils.cpp
+index 07783b51c..3868613e1 100644
+--- a/COFF/DriverUtils.cpp
++++ b/COFF/DriverUtils.cpp
+@@ -39,6 +39,20 @@ using namespace llvm::COFF;
+ using namespace llvm;
+ using llvm::sys::Process;
+ 
++// Protection from winnt defines
++#undef SUBLANG_ENGLISH_US
++#undef RT_MANIFEST
++#undef IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION
++#undef IMAGE_SUBSYSTEM_WINDOWS_CUI
++#undef IMAGE_SUBSYSTEM_EFI_APPLICATION
++#undef IMAGE_SUBSYSTEM_EFI_BOOT_SERVICE_DRIVER
++#undef IMAGE_SUBSYSTEM_EFI_ROM
++#undef IMAGE_SUBSYSTEM_EFI_RUNTIME_DRIVER
++#undef IMAGE_SUBSYSTEM_NATIVE
++#undef IMAGE_SUBSYSTEM_POSIX_CUI
++#undef IMAGE_SUBSYSTEM_WINDOWS_GUI
++#undef IMAGE_SUBSYSTEM_UNKNOWN
++
+ namespace lld {
+ namespace coff {
+ namespace {
+diff --git a/COFF/ICF.cpp b/COFF/ICF.cpp
+index 48895c348..278fd5830 100644
+--- a/COFF/ICF.cpp
++++ b/COFF/ICF.cpp
+@@ -31,6 +31,10 @@
+ 
+ using namespace llvm;
+ 
++// Protect from winnt defines
++#undef IMAGE_SCN_MEM_WRITE
++#undef IMAGE_SCN_MEM_EXECUTE
++
+ namespace lld {
+ namespace coff {
+ 
+diff --git a/COFF/InputFiles.cpp b/COFF/InputFiles.cpp
+index a8f52e039..0a49a778b 100644
+--- a/COFF/InputFiles.cpp
++++ b/COFF/InputFiles.cpp
+@@ -40,6 +40,10 @@ using namespace llvm::support::endian;
+ using llvm::Triple;
+ using llvm::support::ulittle32_t;
+ 
++// Protect from winnt defines
++#undef IMAGE_SCN_LNK_REMOVE
++#undef IMAGE_SYM_DEBUG
++
+ namespace lld {
+ namespace coff {
+ 
+diff --git a/COFF/InputFiles.h b/COFF/InputFiles.h
+index adedbc2ad..909537988 100644
+--- a/COFF/InputFiles.h
++++ b/COFF/InputFiles.h
+@@ -22,6 +22,9 @@
+ #include <set>
+ #include <vector>
+ 
++// Protection from winnt defines
++#undef IMAGE_FILE_MACHINE_UNKNOWN
++
+ namespace llvm {
+ namespace pdb {
+ class DbiModuleDescriptorBuilder;
+diff --git a/COFF/LTO.cpp b/COFF/LTO.cpp
+index fa2a54b61..f819c6d5f 100644
+--- a/COFF/LTO.cpp
++++ b/COFF/LTO.cpp
+@@ -40,6 +40,10 @@ using namespace llvm::object;
+ using namespace lld;
+ using namespace lld::coff;
+ 
++// Protect from winnt defines
++#undef IMAGE_SUBSYSTEM_WINDOWS_BOOT_APPLICATION
++#undef IMAGE_FILE_MACHINE_I386
++
+ static void diagnosticHandler(const DiagnosticInfo &DI) {
+   SmallString<128> ErrStorage;
+   raw_svector_ostream OS(ErrStorage);
+diff --git a/COFF/PDB.cpp b/COFF/PDB.cpp
+index 91a9a01db..9caf30615 100644
+--- a/COFF/PDB.cpp
++++ b/COFF/PDB.cpp
+@@ -139,7 +139,7 @@ private:
+   std::vector<pdb::SecMapEntry> SectionMap;
+ 
+   /// Type index mappings of type server PDBs that we've loaded so far.
+-  std::map<GUID, CVIndexMap> TypeServerIndexMappings;
++  std::map<codeview::GUID, CVIndexMap> TypeServerIndexMappings;
+ };
+ }
+ 
+@@ -273,7 +273,7 @@ const CVIndexMap &PDBLinker::mergeDebugT(ObjFile *File,
+ }
+ 
+ static Expected<std::unique_ptr<pdb::NativeSession>>
+-tryToLoadPDB(const GUID &GuidFromObj, StringRef TSPath) {
++tryToLoadPDB(const codeview::GUID &GuidFromObj, StringRef TSPath) {
+   ErrorOr<std::unique_ptr<MemoryBuffer>> MBOrErr = MemoryBuffer::getFile(
+       TSPath, /*FileSize=*/-1, /*RequiresNullTerminator=*/false);
+   if (!MBOrErr)
+@@ -922,7 +922,7 @@ void PDBLinker::initialize(const llvm::codeview::DebugInfo &BuildId) {
+   auto &InfoBuilder = Builder.getInfoBuilder();
+   InfoBuilder.setAge(BuildId.PDB70.Age);
+ 
+-  GUID uuid;
++  codeview::GUID uuid;
+   memcpy(&uuid, &BuildId.PDB70.Signature, sizeof(uuid));
+   InfoBuilder.setGuid(uuid);
+   InfoBuilder.setSignature(time(nullptr));
+diff --git a/COFF/Writer.cpp b/COFF/Writer.cpp
+index 584f0621b..2e2f344ca 100644
+--- a/COFF/Writer.cpp
++++ b/COFF/Writer.cpp
+@@ -40,6 +40,9 @@ using namespace llvm::support::endian;
+ using namespace lld;
+ using namespace lld::coff;
+ 
++// Protect from winnt defines
++#undef IMAGE_DEBUG_TYPE_CODEVIEW
++
+ static const int SectorSize = 512;
+ static const int DOSStubSize = 64;
+ static const int NumberfOfDataDirectory = 16;
+-- 
+2.15.1
+

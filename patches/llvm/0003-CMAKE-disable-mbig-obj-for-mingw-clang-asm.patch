@@ -1,0 +1,22 @@
+From a18f8e282a79e61b401c60cde47b048c4f9c6590 Mon Sep 17 00:00:00 2001
+From: Martell Malone <martellmalone@gmail.com>
+Date: Sun, 24 Dec 2017 11:14:27 -0800
+Subject: [PATCH 3/3] CMAKE: disable -mbig-obj for mingw clang asm
+
+
+diff --git a/cmake/modules/HandleLLVMOptions.cmake b/cmake/modules/HandleLLVMOptions.cmake
+index f77600a4830..fb5766e739d 100644
+--- a/cmake/modules/HandleLLVMOptions.cmake
++++ b/cmake/modules/HandleLLVMOptions.cmake
+@@ -312,7 +312,7 @@ elseif(MINGW) # FIXME: Also cygwin?
+   # Pass -mbig-obj to mingw gas on Win64. COFF has a 2**16 section limit, and
+   # on Win64, every COMDAT function creates at least 3 sections: .text, .pdata,
+   # and .xdata.
+-  if (CMAKE_SIZEOF_VOID_P EQUAL 8)
++  if (CMAKE_SIZEOF_VOID_P EQUAL 8 AND NOT "${CMAKE_ASM_COMPILER_ID}" MATCHES "Clang")
+     append("-Wa,-mbig-obj" CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+   endif()
+ endif()
+-- 
+2.15.1
+

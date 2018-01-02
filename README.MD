@@ -2,6 +2,7 @@
 
 __The llvm port of mingw-w64.__
 
+Now self contained in a unified alpine Docker script :)
 
 The stack is as follows.
 
@@ -15,10 +16,9 @@ Work has and will continue to be upstreamed where possible
 
 ### Todos
 
- - __compiler-rt__ - partial arm divide functions for arm
- - __libcxx__ - get test suite running and make mingw-w64 pass
- - __llvm clang__ - rebuilds with self already :) need to fix libcxx and test properly
- - __mingw-w64__ - missing some arm headers and defs support still
+ - __libcxx__ - enable test suite testing on cross compile
+ - __mingw-w64__ - add support for aarch64 when devices become available
+ - __wine__ - update alpine wine to 3.0 on release so x64 can test properly
 
 
 ### Status
@@ -26,8 +26,8 @@ Work has and will continue to be upstreamed where possible
  - llvm - __works__
  - clang - __works__
  - clang++ - __works__
- - compiler-rt - __partially working__ - (missing __armv7__ divide patches)
+ - compiler-rt - __works__
  - mingw-w64 - __works__
  - libcxx - __builds__
  - libcxxabi - __works__
- - libunwind - __not working__
+ - libunwind - __works__ (needs support for seh but dwarf works and sjlj for i686)

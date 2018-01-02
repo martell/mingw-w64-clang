@@ -1,0 +1,22 @@
+From e180a9b8e861f3fcdd4fc9cb7c69fc0cf21d34a9 Mon Sep 17 00:00:00 2001
+From: Martell Malone <martellmalone@gmail.com>
+Date: Sun, 24 Dec 2017 11:00:14 -0800
+Subject: [PATCH 2/2] CMAKE: apply -O3 for mingw clang
+
+
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index c100adef258..22f3c5a7936 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -829,7 +829,7 @@ endif()
+ include(AddLLVM)
+ include(TableGen)
+ 
+-if( MINGW )
++if( MINGW AND NOT "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang" )
+   # People report that -O3 is unreliable on MinGW. The traditional
+   # build also uses -O2 for that reason:
+   llvm_replace_compiler_option(CMAKE_CXX_FLAGS_RELEASE "-O3" "-O2")
+-- 
+2.15.1
+
