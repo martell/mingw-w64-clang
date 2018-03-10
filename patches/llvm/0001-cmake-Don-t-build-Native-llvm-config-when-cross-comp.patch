@@ -1,0 +1,55 @@
+From 18789ab5c48dce7cfdfbfcb63f86f51225ced536 Mon Sep 17 00:00:00 2001
+From: Don Hinton <hintonda@gmail.com>
+Date: Sun, 21 Jan 2018 00:29:00 +0000
+Subject: [PATCH] [cmake] Don't build Native llvm-config when cross compiling
+ if passed by user.
+
+Summary:
+Rename LLVM_CONFIG_EXE to LLVM_CONFIG_PATH, and avoid building it if
+passed in by user.  This is the same way CLANG_TABLEGEN and
+LLVM_TABLEGEN are handled, e.g., when -DLLVM_OPTIMIZED_TABLEGEN=ON is
+passed.
+
+Differential Revision: https://reviews.llvm.org/D41806
+
+This is a stripped down version of this patch.
+
+git-svn-id: https://llvm.org/svn/llvm-project/llvm/trunk@323053 91177308-0d34-0410-b5e6-96231b3b80d8
+---
+ cmake/modules/LLVMExternalProjectUtils.cmake |  2 +-
+ tools/llvm-config/CMakeLists.txt             | 15 +++++++--------
+ 2 files changed, 8 insertions(+), 9 deletions(-)
+
+diff --git a/tools/llvm-config/CMakeLists.txt b/tools/llvm-config/CMakeLists.txt
+index 25f99cec978..d7bebfc6ffa 100644
+--- a/tools/llvm-config/CMakeLists.txt
++++ b/tools/llvm-config/CMakeLists.txt
+@@ -64,18 +64,17 @@ endif()
+ # Add the dependency on the generation step.
+ add_file_dependencies(${CMAKE_CURRENT_SOURCE_DIR}/llvm-config.cpp ${BUILDVARIABLES_OBJPATH})
+ 
+-if(CMAKE_CROSSCOMPILING)
+-  set(${project}_LLVM_CONFIG_EXE "${LLVM_NATIVE_BUILD}/bin/llvm-config")
+-  set(${project}_LLVM_CONFIG_EXE ${${project}_LLVM_CONFIG_EXE} PARENT_SCOPE)
++if(CMAKE_CROSSCOMPILING AND NOT LLVM_CONFIG_PATH)
++  set(LLVM_CONFIG_PATH "${LLVM_NATIVE_BUILD}/bin/llvm-config" CACHE STRING "")
+ 
+-  add_custom_command(OUTPUT "${${project}_LLVM_CONFIG_EXE}"
++  add_custom_command(OUTPUT "${LLVM_CONFIG_PATH}"
+     COMMAND ${CMAKE_COMMAND} --build . --target llvm-config --config $<CONFIGURATION>
+     DEPENDS ${LLVM_NATIVE_BUILD}/CMakeCache.txt
+     WORKING_DIRECTORY ${LLVM_NATIVE_BUILD}
+     COMMENT "Building native llvm-config..."
+     USES_TERMINAL)
+-  add_custom_target(${project}NativeLLVMConfig DEPENDS ${${project}_LLVM_CONFIG_EXE})
+-  add_dependencies(${project}NativeLLVMConfig CONFIGURE_LLVM_NATIVE)
++  add_custom_target(NativeLLVMConfig DEPENDS ${LLVM_CONFIG_PATH})
++  add_dependencies(NativeLLVMConfig CONFIGURE_LLVM_NATIVE)
+ 
+-  add_dependencies(llvm-config ${project}NativeLLVMConfig)
+-endif(CMAKE_CROSSCOMPILING)
++  add_dependencies(llvm-config NativeLLVMConfig)
++endif()
+-- 
+2.14.3 (Apple Git-98)
+

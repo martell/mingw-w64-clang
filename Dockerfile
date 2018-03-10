@@ -4,10 +4,13 @@ WORKDIR /build
 
 RUN apk --no-cache update && apk --no-cache upgrade && apk add --no-cache git
 
-RUN git clone -b master https://github.com/llvm-mirror/llvm.git && \
+RUN git config --global user.name "Mingw" && \
+    git config --global user.email root@localhost
+
+RUN git clone -b release_60 https://github.com/llvm-mirror/llvm.git && \
     cd llvm/tools && \
-    git clone -b master https://github.com/llvm-mirror/clang.git && \
-    git clone -b master https://github.com/llvm-mirror/lld.git
+    git clone -b release_60 https://github.com/llvm-mirror/clang.git && \
+    git clone -b release_60 https://github.com/llvm-mirror/lld.git
 
 RUN apk add --no-cache clang clang-dev linux-headers cmake \
     build-base ninja make python2 python2-dev tar
@@ -57,7 +60,6 @@ RUN cd $TOOLCHAIN_PREFIX/bin && \
         done; \
     done
 
-
 # configure of the crt needs bash :/
 RUN apk --no-cache update && apk --no-cache upgrade && apk add --no-cache bash
 
@@ -83,7 +85,7 @@ RUN cd mingw-w64/mingw-w64-crt && \
         cd .. || exit 1; \
     done
 
-RUN git clone -b master https://github.com/llvm-mirror/compiler-rt.git
+RUN git clone -b release_60 https://github.com/llvm-mirror/compiler-rt.git
 
 #TODO: Support i686 for mingw-w64
 #      Martell is working on a patch to force i686 like android does
@@ -130,9 +132,9 @@ RUN cd test && \
         $arch-w64-mingw32-clang test-tors.c -o test-tors-$arch.exe || exit 1; \
     done
 
-RUN git clone -b master https://github.com/llvm-mirror/libcxx.git && \
-    git clone -b master https://github.com/llvm-mirror/libcxxabi.git && \
-    git clone -b master https://github.com/llvm-mirror/libunwind.git
+RUN git clone -b release_60 https://github.com/llvm-mirror/libcxx.git && \
+    git clone -b release_60 https://github.com/llvm-mirror/libcxxabi.git && \
+    git clone -b release_60 https://github.com/llvm-mirror/libunwind.git
 
 RUN cd libunwind && \
     for arch in $TOOLCHAIN_ARCHS; do \
@@ -186,6 +188,9 @@ RUN cd libcxxabi && \
         ninja && \
         cd .. || exit 1; \
     done
+
+COPY patches/libcxx/0001-libcxx-Move-Windows-threading-support-into-a-.cpp-fi.patch /build/
+RUN cd libcxx && git am ../0001-libcxx-Move-Windows-threading-support-into-a-.cpp-fi.patch
 
 RUN cd libcxx && \
     for arch in $TOOLCHAIN_ARCHS; do \
@@ -249,14 +254,11 @@ ENV NM=llvm-nm
 
 RUN apk --no-cache update && apk --no-cache upgrade && apk add --no-cache wine
 
-RUN git config --global user.name "Mingw" && \
-    git config --global user.email root@localhost
+COPY patches/llvm/0001-cmake-Don-t-build-Native-llvm-config-when-cross-comp.patch /build/
+RUN cd llvm && git am ../0001-cmake-Don-t-build-Native-llvm-config-when-cross-comp.patch
 
-COPY patches/llvm/0001-CMAKE-Add-flag-to-skip-building-NATIVE-tools.patch /build/
-RUN cd llvm && git am ../0001-CMAKE-Add-flag-to-skip-building-NATIVE-tools.patch
-
-COPY patches/llvm/0001-fixup-tblgen.patch /build/
-RUN cd llvm && git am ../0001-fixup-tblgen.patch
+#COPY patches/llvm/0001-fixup-tblgen.patch /build/
+#RUN cd llvm && git am ../0001-fixup-tblgen.patch
 
 COPY patches/llvm/0002-CMAKE-apply-O3-for-mingw-clang.patch /build/
 RUN cd llvm && git am ../0002-CMAKE-apply-O3-for-mingw-clang.patch
@@ -264,12 +266,13 @@ RUN cd llvm && git am ../0002-CMAKE-apply-O3-for-mingw-clang.patch
 COPY patches/llvm/0003-CMAKE-disable-mbig-obj-for-mingw-clang-asm.patch /build/
 RUN cd llvm && git am ../0003-CMAKE-disable-mbig-obj-for-mingw-clang-asm.patch
 
-COPY patches/lld/0001-LLD-Protect-COFF.h-from-winnt-defines.patch /build/
-RUN cd llvm/tools/lld && git am ../../../0001-LLD-Protect-COFF.h-from-winnt-defines.patch
+#COPY patches/lld/0001-LLD-Protect-COFF.h-from-winnt-defines.patch /build/
+#RUN cd llvm/tools/lld && git am ../../../0001-LLD-Protect-COFF.h-from-winnt-defines.patch
 
 # Only cross building to x86_64 for now, change this to add i386/i686 if you wish.
 ENV HOST_TOOLCHAIN_ARCHS="x86_64"
 
+# Build LLVM, Clang and LLD for mingw-w64
 RUN cd llvm && \
     for arch in $HOST_TOOLCHAIN_ARCHS; do \
         mkdir build-cross-$arch && cd build-cross-$arch && cmake -G"Ninja" \
@@ -287,8 +290,8 @@ RUN cd llvm && \
         -DCLANG_DEFAULT_LINKER=lld \
         -DCLANG_DEFAULT_RTLIB=compiler-rt \
         -DBUILD_SHARED_LIBS=OFF \
-        -DCMAKE_CXX_FLAGS="-D_GNU_SOURCE" \
-        -DLLVM_CONFIG=$TOOLCHAIN_PREFIX/bin/llvm-config \
+        -DCMAKE_CXX_FLAGS="-D_GNU_SOURCE -Wl,-lpsapi" \
+        -DLLVM_CONFIG_PATH=$TOOLCHAIN_PREFIX/bin/llvm-config \
         -DLLVM_TABLEGEN=$TOOLCHAIN_PREFIX/bin/llvm-tblgen \
         -DCLANG_TABLEGEN=$TOOLCHAIN_PREFIX/bin/clang-tblgen \
         -DCMAKE_SYSTEM_PROGRAM_PATH=$TOOLCHAIN_PREFIX/bin \
@@ -321,7 +324,7 @@ RUN for host in $HOST_TOOLCHAIN_ARCHS; do \
         done; \
     done
 
-# Transfer mingw-w64-crt
+# Transfer mingw-w64-crt, libcxx and libcxxabi
 RUN cd mingw-w64/mingw-w64-crt && \
     for host in $HOST_TOOLCHAIN_ARCHS; do \
         for arch in $TOOLCHAIN_ARCHS; do \
@@ -352,20 +355,22 @@ RUN cd compiler-rt && \
         done; \
     done
 
+RUN apk add --no-cache wine freetype
+RUN WINEARCH=win64 winecfg
 
-# TODO: update wine to 3.0 for alpine to retest
-#RUN apk del wine && apk add --no-cache wine-staging --update-cache --repository http://dl-cdn.alpinelinux.org/alpine/edge/testing/
+COPY tests/test.c tests/test-tors.c /build/test/
 
-#RUN WINEARCH=win64 winecfg
+# wine currently fails when calling clang
+# https://bugs.winehq.org/show_bug.cgi?id=44061
+# fixme:crypt:CRYPT_LoadProvider Failed to load dll L"C:\\windows\\system32\\rsaenh.dll"
+# LLVM ERROR: Could not acquire a cryptographic context: Unknown error (0x8009001D)
 
-#COPY tests/test.c tests/test-tors.c /build/test/
+RUN cd test && \
+    for arch in $TOOLCHAIN_ARCHS; do \
+        wine64 $CROSS_TOOLCHAIN_PREFIX-x86_64/bin/clang -target x86_64-windows-gnu test.c -o test-c-$arch.exe || exit 1; \
+    done
 
-#RUN cd test && \
-#    for arch in $TOOLCHAIN_ARCHS; do \
-#        wine64 $CROSS_TOOLCHAIN_PREFIX-x86_64/bin/clang -target x86_64-windows-gnu test.c -o test-c-$arch.exe || exit 1; \
-#    done
-
-#RUN cd test && \
-#    for arch in $TOOLCHAIN_ARCHS; do \
-#        wine64 $CROSS_TOOLCHAIN_PREFIX-x86_64/bin/clang -target x86_64-windows-gnu test-tors.c -o test-tors-$arch.exe || exit 1; \
-#    done
+RUN cd test && \
+    for arch in $TOOLCHAIN_ARCHS; do \
+        wine64 $CROSS_TOOLCHAIN_PREFIX-x86_64/bin/clang -target x86_64-windows-gnu test-tors.c -o test-tors-$arch.exe || exit 1; \
+    done
