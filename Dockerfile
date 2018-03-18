@@ -16,29 +16,15 @@ RUN apk add --no-cache clang clang-dev linux-headers cmake \
     build-base ninja make python2 python2-dev tar
 
 ENV TOOLCHAIN_PREFIX=/build/prefix
+ENV CMAKE_BUILD_TYPE=MinSizeRel
 
-#TODO: Support creating libs with these arguments.
-# martell is researching this atm
-#    -DCMAKE_AR=llvm-ar \
-#    -DCMAKE_RANLIB=llvm-ranlib \
-
-# Build LLVM, Clang and LLD
-RUN cd llvm && mkdir build && cd build && cmake -G"Ninja" \
-    -DCMAKE_C_COMPILER=clang \
-    -DCMAKE_CXX_COMPILER=clang++ \
-    -DCMAKE_INSTALL_PREFIX=$TOOLCHAIN_PREFIX \
-    -DCMAKE_BUILD_TYPE=Release \
-    -DLLVM_ENABLE_ASSERTIONS=ON \
-    -DLLVM_TARGETS_TO_BUILD="ARM;X86" \
-    -DCLANG_DEFAULT_CXX_STDLIB=libc++ \
-    -DCLANG_DEFAULT_LINKER=lld \
-    -DCLANG_DEFAULT_RTLIB=compiler-rt \
-    ../ && ninja && ninja install && \
-    cp bin/clang-tblgen $TOOLCHAIN_PREFIX/bin/clang-tblgen && \
-    cd .. && rm -rf build
+COPY ./scripts/build-llvm.sh build-llvm.sh
+RUN ./build-llvm.sh $TOOLCHAIN_PREFIX $CMAKE_BUILD_TYPE
 
 ENV ORIG_PATH=$PATH
 ENV PATH=$TOOLCHAIN_PREFIX/bin:$ORIG_PATH
+
+
 RUN git clone git://git.code.sf.net/p/mingw-w64/mingw-w64
 ENV TOOLCHAIN_ARCHS="i686 x86_64 armv7"
 
