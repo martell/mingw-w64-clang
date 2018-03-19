@@ -24,21 +24,14 @@ RUN ./build-llvm.sh $TOOLCHAIN_PREFIX $CMAKE_BUILD_TYPE
 ENV ORIG_PATH=$PATH
 ENV PATH=$TOOLCHAIN_PREFIX/bin:$ORIG_PATH
 
-
 RUN git clone git://git.code.sf.net/p/mingw-w64/mingw-w64
 ENV TOOLCHAIN_ARCHS="i686 x86_64 armv7"
 
-RUN cd mingw-w64/mingw-w64-headers && \
-    for arch in $TOOLCHAIN_ARCHS; do \
-        mkdir build-$arch && cd build-$arch && \
-        ../configure --host=$arch-w64-mingw32 \
-            --enable-secure-api --enable-idl --prefix= \
-            --with-default-win32-winnt=0x600 && \
-        DESTDIR=$TOOLCHAIN_PREFIX/$arch-w64-mingw32 make install && cd .. || exit 1; \
-    done
+# configure of the mingw-w64 crt needs bash :/
+RUN apk --no-cache update && apk --no-cache upgrade && apk add --no-cache bash
 
 # Install the wrapper scripts
-COPY wrappers/clang-target-wrapper /build/prefix/bin
+COPY wrappers/clang-target-wrapper $TOOLCHAIN_PREFIX/bin
 RUN cd $TOOLCHAIN_PREFIX/bin && \
     for arch in $TOOLCHAIN_ARCHS; do \
         for exec in clang clang++; do \
@@ -46,30 +39,10 @@ RUN cd $TOOLCHAIN_PREFIX/bin && \
         done; \
     done
 
-# configure of the crt needs bash :/
-RUN apk --no-cache update && apk --no-cache upgrade && apk add --no-cache bash
+COPY ./scripts/build-mingw-w64.sh build-mingw-w64.sh
+RUN ./build-mingw-w64.sh $TOOLCHAIN_PREFIX $TOOLCHAIN_ARCHS
 
-# Build Mingw-w64 with our freshly built Clang
-RUN cd mingw-w64/mingw-w64-crt && \
-    for arch in $TOOLCHAIN_ARCHS; do \
-        mkdir build-$arch && cd build-$arch && \
-        case $arch in \
-        armv7) \
-            FLAGS="--disable-lib32 --disable-lib64 --enable-libarm32" \
-            ;; \
-        i686) \
-            FLAGS="--enable-lib32 --disable-lib64" \
-            ;; \
-        x86_64) \
-            FLAGS="--disable-lib32 --enable-lib64" \
-            ;; \
-        esac && \
-        CC=$arch-w64-mingw32-clang CXX=$arch-w64-mingw32-clang++ \
-        AS=llvm-as AR=llvm-ar RANLIB=llvm-ranlib DLLTOOL=llvm-dlltool \
-        ../configure --prefix= --host=$arch-w64-mingw32 $FLAGS && \
-        make && DESTDIR=$TOOLCHAIN_PREFIX/$arch-w64-mingw32 make install && \
-        cd .. || exit 1; \
-    done
+#TODO: rework compiler-rt libunwind and native mingw-w64 toolchain into scripts
 
 RUN git clone -b release_60 https://github.com/llvm-mirror/compiler-rt.git
 
